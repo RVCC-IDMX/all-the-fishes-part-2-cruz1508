@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animations</title>
+    <script src="https://pixijs.download/release/pixi.js"></script>
+</head>
+<body>
+
+<script type="module">
+    //The App
+    const app = new PIXI.Application();
+    await app.init({
+        width:1920,
+        height:1080,
+        backgroundColor: 0x000000
+    });
+
+    //Load in sprite
+    await PIXI.Assets.load('img/brownfish.png');
+
+
+    //Add view to document
+    document.body.appendChild(app.view);
+
+    //Animator
+    let Animate = {}; //just blank for now
+
+    //Move to function
+    Animate.to = function(obj,end) {
+
+        //Make a promise
+        return new Promise( (resolve,reject) => {
+            
+            //Initial state parameters
+            var start = {
+                x : obj.x,
+                y : obj.y,
+                scaleX : obj.scale.x,
+                scaleY : obj.scale.y
+            };
+
+            //Set defaults
+            if (end.duration == undefined) end.duration = 0;
+            if (end.easing == undefined) end.easing = Animate.linear;
+
+            //We need to know when we start
+            var startTime = Date.now();
+
+            //This is this object's personal animation loop
+            function loop() {
+
+                //Calculate our delta
+                let ticker = Date.now() - startTime;
+                let delta = ticker/end.duration;
+                let ease = end.easing(delta);
+
+                //Are we done? Snap to the end!
+                if (delta >= 1 || end.duration === 0) {
+                    if (end.x != undefined)
+                        obj.x = end.x;
+                    if (end.y != undefined)
+                        obj.y = end.y;
+                    if (end.scaleX != undefined)
+                        obj.scale.x = end.scaleX;
+                    if (end.scaleY != undefined)
+                        obj.scale.y = end.scaleY;
+                    console.log("Done!");
+
+                    resolve();
+                    return;
+                }
+
+                //Interpolation function
+                let lerp = (a, b, n) => {
+                    return (1 - n) * a + n * b;
+                };
+
+                //Lerp our coordinates
+                if (end.x != undefined)
+                    obj.x = lerp(start.x, end.x, ease);
+                if (end.y != undefined)
+                    obj.y = lerp(start.y, end.y, ease);
+                //Lerp scale
+                if (end.scaleX != undefined)
+                    obj.scale.x = lerp(start.scaleX, end.scaleX, ease);
+                if (end.scaleY != undefined)
+                    obj.scale.y = lerp(start.scaleY, end.scaleY, ease);
+
+                //Loop!
+                obj.animationID = requestAnimationFrame(loop);
+
+            }
+
+            //Clear all prior animations
+            cancelAnimationFrame(obj.animationID);
+
+            loop();
+
+        });
+
+    }
+
+    //Stop!!!
+    Animate.stop = function(obj) {
+        cancelAnimationFrame(obj.animationID);
+    }
+
+    //Easing functions!
+    Animate.linear = (x) => x;
+
+    //Quadratic
+    Animate.easeIn = (x) => x*x;
+    Animate.easeOut = (x) => 1 - (1-x) * (1-x);
+    Animate.easeInOut = (x) => {
+        if (x < 0.5) return 2 * x * x;
+        return 1- Math.pow(-2 * x + 2, 2) / 2;
+    }
+
+
+    //Pause
+    function pause(ms) {
+
+        return new Promise( (resolve,reject) => {
+
+            setTimeout(resolve,ms);
+
+        });
+
+    }
+
+
+
+    //Test
+    let bob = PIXI.Sprite.from('img/brownfish.png');
+        bob.anchor.set(.5);
+        bob.scale.set(.2);
+
+    app.stage.addChild(bob);
+
+
+    async function go() {
+        await Animate.to(bob,{
+            scaleX : .2,
+            duration:500
+        });
+        await Animate.to(bob,{
+            x:400,
+            y:50,
+            duration:2000,
+            easing:Animate.easeInOut
+        });
+        await Animate.to(bob,{
+            scaleX : -.2,
+            duration:500
+        });
+        await Animate.to(bob,{
+            x:200,
+            y:350,
+            duration:2000,
+            easing:Animate.easeInOut
+        });
+        await pause(2000);
+        await Animate.to(bob,{
+            x:0,
+            y:50,
+            duration:2000,
+            easing:Animate.easeInOut
+        });
+        go();
+
+    }
+
+    go();
+
+</script>
+    
+</body>
+</html>
